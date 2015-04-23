@@ -55,6 +55,7 @@ Spree::Order.class_eval do
         # create adjustment off association to prevent reload
         sca = adjustments.store_credits.create(:label => Spree.t(:store_credit) , :amount => -(@store_credit_amount))
       end
+      consume_users_credit
     end
 
     # recalc totals and ensure payment is set to new amount
@@ -62,8 +63,13 @@ Spree::Order.class_eval do
     pending_payments.first.amount = total if pending_payments.first
   end
 
+  def credit_used?
+    self.store_credit_amount != 0
+  end
+
   def consume_users_credit
-    return unless completed? and user.present?
+    binding.pry
+    return unless credit_used? and user.present?
     credit_used = self.store_credit_amount
 
     user.store_credits.each do |store_credit|
@@ -81,8 +87,7 @@ Spree::Order.class_eval do
     end
   end
   # consume users store credit once the order has completed.
-  state_machine.after_transition :to => :complete,  :do => :consume_users_credit
-
+  # state_machine.before_transition to: :complete, do: :consume_users_credit
   # ensure that user has sufficient credits to cover adjustments
   #
   def ensure_sufficient_credit
