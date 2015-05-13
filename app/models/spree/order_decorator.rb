@@ -63,6 +63,15 @@ Spree::Order.class_eval do
   end
 
   state_machine.after_transition :to => :complete,  :do => :consume_users_credit
+  state_machine.after_transition to: :complete, do: :force_total_update
+
+  def force_total_update
+    a_total = line_items.sum(:adjustment_total) +
+              shipments.sum(:adjustment_total)  +
+              adjustments.eligible.sum(:amount)
+    update_column(:adjustment_total, a_total)
+  end
+
 
   def consume_users_credit
     return unless completed? and user.present?
